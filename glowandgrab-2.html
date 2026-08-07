@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlowAndGrab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<script>
+  // ====================================================================
+  // CONFIG: paste your Apps Script Web App URL below (ends in /exec).
+  // Every visitor's browser loads this file, so the URL needs to be
+  // baked in here — not typed in per-device. Re-upload after editing.
+  // ====================================================================
+  const API_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
+</script>
+
+<style>
+  :root{
+    --bg: #241726;
+    --bg-soft: #331f3a;
+    --bg-card: #2e1c34;
+    --pink: #ff5da2;
+    --gold: #f2c14e;
+    --cream: #f7eee2;
+    --muted: #b79ec4;
+    --line: rgba(247,238,226,0.10);
+    --line-strong: rgba(247,238,226,0.20);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(120% 140% at 15% -10%, #3a2340 0%, var(--bg) 55%, #1b1120 100%);
+    color: var(--cream);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width: 1080px; margin: 0 auto; padding: 0 20px;}
+  button{font-family:inherit; cursor:pointer; border:none;}
+  button:focus-visible, a:focus-visible, input:focus-visible{
+    outline: 2px solid var(--gold); outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration: 0.001ms !important; transition-duration: 0.001ms !important;}
+  }
+
+  .admin-nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--line);
+    background: rgba(20,12,24,0.6); position: sticky; top:0; z-index: 20; backdrop-filter: blur(6px);
+  }
+  .admin-nav .brand{font-family:'Fraunces', serif; font-style:italic; font-weight:600; font-size: 1.2rem;}
+  .admin-tabs{display:flex; gap:6px; background: var(--bg-soft); padding:4px; border-radius: 999px;}
+  .admin-tabs button{
+    padding:8px 16px; border-radius:999px; background:transparent; color: var(--muted); font-weight:600; font-size:0.85rem;
+  }
+  .admin-tabs button.active{background: var(--pink); color:#2a0f1c;}
+  .exit-admin{font-size:0.8rem; color: var(--muted); border:1px solid var(--line-strong); padding:8px 14px; border-radius:999px;}
+  .exit-admin:hover{color:var(--cream); border-color: var(--gold);}
+
+  .hero{padding: 64px 20px 28px; text-align:center;}
+  .eyebrow{
+    font-family:'Space Mono', monospace; letter-spacing:0.14em; text-transform:uppercase;
+    font-size:0.7rem; color: var(--gold); display:inline-flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before, .eyebrow::after{content:''; width:18px; height:1px; background: var(--gold); opacity:0.6;}
+  .wordmark{
+    font-family:'Fraunces', serif; font-style: italic; font-weight:600;
+    font-size: clamp(2.6rem, 8vw, 4.4rem); line-height:1; margin: 14px 0 10px;
+    background: linear-gradient(100deg, var(--cream) 20%, var(--gold) 55%, var(--pink) 90%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .tagline{color: var(--muted); font-size: 1rem; max-width: 440px; margin: 0 auto;}
+
+  .grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px; padding: 20px 20px 80px;
+  }
+  .card{
+    background: var(--bg-card); border:1px solid var(--line); border-radius: 18px;
+    overflow:hidden; display:flex; flex-direction:column; transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover{border-color: var(--line-strong); transform: translateY(-2px);}
+  .card img{width:100%; aspect-ratio: 1/1; object-fit:cover; background:#1b1120;}
+  .card-body{padding: 14px 16px 16px; display:flex; flex-direction:column; gap:10px; flex:1;}
+  .card-name{font-size:0.92rem; font-weight:600; line-height:1.3;}
+  .grab-btn{
+    margin-top:auto; background: var(--pink); color:#2a0f1c; font-weight:700; font-size:0.85rem;
+    padding:10px 14px; border-radius: 10px; display:flex; align-items:center; justify-content:center; gap:6px;
+    transition: background 0.15s;
+  }
+  .grab-btn:hover{background: var(--gold);}
+
+  .empty, .config-warning{
+    text-align:center; padding: 60px 24px; color: var(--muted); border: 1px dashed var(--line-strong);
+    border-radius: 18px; margin: 10px 20px 80px; max-width: 480px; margin-inline:auto;
+  }
+  .empty h3, .config-warning h3{font-family:'Fraunces', serif; font-weight:500; color: var(--cream); font-size:1.3rem; margin: 0 0 8px;}
+  .empty a, .config-warning code{color: var(--gold); font-weight:600;}
+  .config-warning{border-color: var(--pink); color: var(--cream);}
+  .config-warning code{display:block; background:#150a18; padding:10px; border-radius:8px; margin-top:12px; font-family:'Space Mono',monospace; font-size:0.75rem; word-break:break-all;}
+
+  footer.shop-footer{text-align:center; padding: 24px 20px 40px; color: var(--muted); font-size:0.78rem;}
+
+  .admin-main{padding: 32px 20px 80px;}
+  .section-title{font-family:'Fraunces', serif; font-weight:500; font-size:1.4rem; margin: 0 0 4px;}
+  .section-sub{color: var(--muted); font-size:0.85rem; margin: 0 0 24px;}
+
+  .stat-row{display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:14px; margin-bottom: 30px;}
+  .stat-card{background: var(--bg-card); border:1px solid var(--line); border-radius:14px; padding:16px 18px;}
+  .stat-card .num{font-family:'Space Mono', monospace; font-size:1.8rem; font-weight:700; color: var(--gold);}
+  .stat-card .label{font-size:0.75rem; color: var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px;}
+
+  .two-col{display:grid; grid-template-columns: 1.2fr 1fr; gap:20px;}
+  @media (max-width: 860px){.two-col{grid-template-columns: 1fr;}}
+
+  .panel{background: var(--bg-card); border:1px solid var(--line); border-radius:16px; padding:20px;}
+  .panel h4{margin:0 0 14px; font-size:0.95rem; font-weight:700;}
+
+  .bar-row{display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:0.85rem;}
+  .bar-row .src-name{width:110px; flex-shrink:0; color: var(--cream); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .bar-track{flex:1; height:8px; background: var(--bg-soft); border-radius:999px; overflow:hidden;}
+  .bar-fill{height:100%; background: linear-gradient(90deg, var(--pink), var(--gold)); border-radius:999px;}
+  .bar-count{font-family:'Space Mono', monospace; width:34px; text-align:right; color: var(--muted); flex-shrink:0;}
+
+  .receipt{
+    font-family:'Space Mono', monospace; font-size:0.78rem; background: #150a18;
+    border: 1px dashed var(--line-strong); border-radius: 10px; padding: 14px 16px;
+    max-height: 320px; overflow-y:auto;
+  }
+  .receipt-row{display:flex; justify-content:space-between; gap:10px; padding: 6px 0; border-bottom: 1px dotted var(--line);}
+  .receipt-row:last-child{border-bottom:none;}
+  .receipt-row .rt-src{color: var(--gold);}
+  .receipt-row .rt-prod{color: var(--muted); flex:1; text-align:left; padding-left:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .receipt-row .rt-time{color: var(--muted); flex-shrink:0;}
+  .receipt-empty{color: var(--muted); text-align:center; padding: 20px 0;}
+
+  .form-grid{display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;}
+  @media (max-width:600px){.form-grid{grid-template-columns:1fr;}}
+  .form-grid input{
+    background: var(--bg-soft); border:1px solid var(--line-strong); color: var(--cream);
+    padding:10px 12px; border-radius:8px; font-size:0.85rem; width:100%;
+  }
+  .form-grid input::placeholder{color: var(--muted);}
+  .add-btn{background: var(--gold); color:#2a1c0f; font-weight:700; padding:10px 18px; border-radius:8px; font-size:0.85rem;}
+  .add-btn:hover{background: var(--pink); color:#2a0f1c;}
+
+  .prod-list{display:flex; flex-direction:column; gap:10px; margin-top: 18px;}
+  .prod-row{
+    display:flex; align-items:center; gap:12px; background: var(--bg-soft);
+    border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+  }
+  .prod-row img{width:44px; height:44px; border-radius:8px; object-fit:cover; background:#1b1120; flex-shrink:0;}
+  .prod-row .pr-info{flex:1; min-width:0;}
+  .prod-row .pr-name{font-size:0.85rem; font-weight:600;}
+  .prod-row .pr-link{font-size:0.72rem; color: var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;}
+  .del-btn{background:transparent; color: var(--muted); font-size:0.75rem; border:1px solid var(--line-strong); padding:6px 12px; border-radius:999px; flex-shrink:0;}
+  .del-btn:hover{color: var(--pink); border-color: var(--pink);}
+
+  .howto{background: var(--bg-soft); border-radius:12px; padding:16px 18px; font-size:0.8rem; color: var(--muted); line-height:1.6; margin-top:24px;}
+  .howto code{background: rgba(0,0,0,0.3); color: var(--gold); padding:2px 6px; border-radius:5px; font-family:'Space Mono', monospace;}
+
+  .loading{text-align:center; padding:60px 20px; color: var(--muted); font-family:'Space Mono', monospace; font-size:0.85rem;}
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background: var(--gold); color:#2a1c0f;
+    padding:10px 20px; border-radius:999px; font-size:0.82rem; font-weight:600; z-index:50; opacity:0; transition:opacity 0.25s;
+  }
+  .toast.show{opacity:1;}
+</style>
+
+<div id="admin-nav-slot"></div>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const isAdmin = params.get('admin') === '1';
+  const source = params.get('src') || params.get('source') || 'direct';
+  const app = document.getElementById('app');
+  const navSlot = document.getElementById('admin-nav-slot');
+  const configured = API_URL && API_URL.indexOf('http') === 0;
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 1800);
+  }
+  function esc(s){
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  async function apiGet(action, extra){
+    const url = new URL(API_URL);
+    url.searchParams.set('action', action);
+    for(const k in (extra || {})) url.searchParams.set(k, extra[k]);
+    const res = await fetch(url.toString());
+    if(!res.ok) throw new Error('bad response');
+    return await res.json();
+  }
+
+  async function loadProducts(){
+    try{ return await apiGet('products'); }
+    catch(e){ console.error('loadProducts failed', e); return null; }
+  }
+  async function loadTraffic(){
+    try{ return await apiGet('traffic'); }
+    catch(e){ console.error('loadTraffic failed', e); return null; }
+  }
+  function trackClick(product){
+    // fire-and-forget so the affiliate link opens immediately either way
+    apiGet('click', { source, productId: product.id, productName: product.name }).catch(()=>{});
+  }
+
+  function configWarning(){
+    return `
+      <div class="config-warning">
+        <h3>Backend not connected yet</h3>
+        <p>Deploy the Apps Script backend, then paste its Web App URL into the
+        <code>API_URL</code> constant near the top of this file and re-upload it.</p>
+        <code>const API_URL = "PASTE_YOUR_WEB_APP_URL_HERE";</code>
+      </div>`;
+  }
+
+  /* ---------------- SHOP VIEW ---------------- */
+  async function renderShop(){
+    app.innerHTML = '<div class="loading">loading the shop&hellip;</div>';
+
+    let html = `
+      <div class="hero">
+        <span class="eyebrow">shop with me</span>
+        <h1 class="wordmark">GlowAndGrab</h1>
+        <p class="tagline">Beauty, gadgets &amp; feel-good finds &mdash; the stuff worth grabbing, curated one scroll at a time.</p>
+      </div>
+    `;
+
+    if(!configured){
+      app.innerHTML = html + configWarning();
+      return;
+    }
+
+    const products = await loadProducts();
+
+    if(products === null){
+      html += `<div class="config-warning"><h3>Couldn't load products</h3><p>Check that the Apps Script deployment is set to "Anyone" access and the URL is correct.</p></div>`;
+    } else if(products.length === 0){
+      html += `
+        <div class="empty">
+          <h3>Nothing on the shelf yet</h3>
+          <p>Add your first product from <a href="?admin=1">GlowAndGrab HQ</a>.</p>
+        </div>`;
+    } else {
+      html += '<div class="grid">' + products.map(p => `
+        <div class="card">
+          <img src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.style.opacity=0.25">
+          <div class="card-body">
+            <div class="card-name">${esc(p.name)}</div>
+            <button class="grab-btn" data-id="${esc(p.id)}">Grab this &rarr;</button>
+          </div>
+        </div>
+      `).join('') + '</div>';
+    }
+
+    html += `<footer class="shop-footer">curated &amp; restocked regularly &middot; as an Amazon Associate, purchases through these links may earn a commission</footer>`;
+    app.innerHTML = html;
+
+    if(products){
+      app.querySelectorAll('.grab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const p = products.find(x => x.id === btn.dataset.id);
+          if(p){ trackClick(p); window.open(p.link, '_blank'); }
+        });
+      });
+    }
+  }
+
+  /* ---------------- ADMIN VIEW ---------------- */
+  function renderAdminNav(activeTab){
+    navSlot.innerHTML = `
+      <div class="admin-nav">
+        <span class="brand">GlowAndGrab HQ</span>
+        <div class="admin-tabs">
+          <button data-tab="overview" class="${activeTab==='overview'?'active':''}">Overview</button>
+          <button data-tab="products" class="${activeTab==='products'?'active':''}">Products</button>
+        </div>
+        <a class="exit-admin" href="${window.location.pathname}">View shop</a>
+      </div>`;
+    navSlot.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => renderAdmin(b.dataset.tab));
+    });
+  }
+
+  function timeAgo(ts){
+    const s = Math.floor((Date.now() - ts)/1000);
+    if(s < 60) return s + 's ago';
+    const m = Math.floor(s/60);
+    if(m < 60) return m + 'm ago';
+    const h = Math.floor(m/60);
+    if(h < 24) return h + 'h ago';
+    return Math.floor(h/24) + 'd ago';
+  }
+
+  async function renderAdmin(tab){
+    tab = tab || 'overview';
+    renderAdminNav(tab);
+    app.innerHTML = '<div class="loading">pulling your numbers&hellip;</div>';
+
+    if(!configured){
+      app.innerHTML = `<div class="admin-main wrap">${configWarning()}</div>`;
+      return;
+    }
+
+    const products = await loadProducts() || [];
+    const traffic = await loadTraffic() || {log:[], bySource:{}, byProduct:{}};
+    const bySource = traffic.bySource || {};
+    const byProduct = traffic.byProduct || {};
+    const log = traffic.log || [];
+
+    if(tab === 'overview'){
+      const totalClicks = Object.values(bySource).reduce((a,b)=>a+b,0);
+      const sourceEntries = Object.entries(bySource).sort((a,b)=>b[1]-a[1]);
+      const topSource = sourceEntries[0] ? sourceEntries[0][0] : '&mdash;';
+      const maxSourceCount = sourceEntries[0] ? sourceEntries[0][1] : 1;
+
+      const productMap = {}; products.forEach(p => productMap[p.id] = p.name);
+      const topProductEntry = Object.entries(byProduct).sort((a,b)=>b[1]-a[1])[0];
+      const topProductName = topProductEntry ? (productMap[topProductEntry[0]] || 'deleted product') : '&mdash;';
+
+      app.innerHTML = `
+        <div class="admin-main wrap">
+          <h2 class="section-title">Traffic overview</h2>
+          <p class="section-sub">Every "Grab this" click, tagged by whichever <code>?src=</code> link brought them here.</p>
+
+          <div class="stat-row">
+            <div class="stat-card"><div class="num">${totalClicks}</div><div class="label">Total clicks</div></div>
+            <div class="stat-card"><div class="num">${products.length}</div><div class="label">Live products</div></div>
+            <div class="stat-card"><div class="num">${esc(topSource)}</div><div class="label">Top source</div></div>
+            <div class="stat-card"><div class="num" style="font-size:1.1rem">${esc(topProductName)}</div><div class="label">Top product</div></div>
+          </div>
+
+          <div class="two-col">
+            <div class="panel">
+              <h4>Clicks by Instagram source</h4>
+              ${sourceEntries.length === 0 ? '<p class="section-sub" style="margin:0">No clicks yet &mdash; share your shop link with a <code>?src=</code> tag.</p>' :
+                sourceEntries.map(([src,count]) => `
+                  <div class="bar-row">
+                    <span class="src-name">${esc(src)}</span>
+                    <div class="bar-track"><div class="bar-fill" style="width:${Math.max(6,(count/maxSourceCount)*100)}%"></div></div>
+                    <span class="bar-count">${count}</span>
+                  </div>
+                `).join('')
+              }
+            </div>
+            <div class="panel">
+              <h4>Recent activity</h4>
+              <div class="receipt">
+                ${log.length === 0 ? '<div class="receipt-empty">&mdash; no traffic logged yet &mdash;</div>' :
+                  log.slice(0,40).map(item => `
+                    <div class="receipt-row">
+                      <span class="rt-src">${esc(item.source)}</span>
+                      <span class="rt-prod">${esc(item.productName || '')}</span>
+                      <span class="rt-time">${timeAgo(item.ts)}</span>
+                    </div>
+                  `).join('')
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="howto">
+            <strong>How the tracking works:</strong> the shop page reads a <code>?src=</code> parameter from its URL. Put a different link in each Instagram bio &mdash;
+            e.g. <code>your-site.com/?src=glowandgrab_main</code> or <code>your-site.com/?src=daily_obsessions</code> &mdash; and every click on a product gets
+            logged against that source in your Google Sheet. Keep this <code>?admin=1</code> link private since anyone with it can see these numbers.
+          </div>
+        </div>`;
+    }
+
+    if(tab === 'products'){
+      app.innerHTML = `
+        <div class="admin-main wrap">
+          <h2 class="section-title">Products</h2>
+          <p class="section-sub">Add the products showing on your shop page, with their real amzn.to affiliate links.</p>
+
+          <div class="panel">
+            <h4>Add a product</h4>
+            <div class="form-grid">
+              <input id="f-name" placeholder="Product name" />
+              <input id="f-image" placeholder="Image URL" />
+              <input id="f-link" placeholder="Affiliate link (amzn.to/&hellip;)" style="grid-column: 1 / -1" />
+            </div>
+            <button class="add-btn" id="add-btn">Add product</button>
+          </div>
+
+          <div class="prod-list" id="prod-list">
+            ${products.length === 0 ? '<p class="section-sub" style="margin-top:16px">No products yet.</p>' :
+              products.map(p => `
+                <div class="prod-row" data-id="${esc(p.id)}">
+                  <img src="${esc(p.image)}" onerror="this.style.opacity=0.25">
+                  <div class="pr-info">
+                    <div class="pr-name">${esc(p.name)}</div>
+                    <span class="pr-link">${esc(p.link)}</span>
+                  </div>
+                  <button class="del-btn" data-id="${esc(p.id)}">Remove</button>
+                </div>
+              `).join('')
+            }
+          </div>
+        </div>`;
+
+      document.getElementById('add-btn').addEventListener('click', async () => {
+        const name = document.getElementById('f-name').value.trim();
+        const image = document.getElementById('f-image').value.trim();
+        const link = document.getElementById('f-link').value.trim();
+        if(!name || !link){ showToast('Add a name and a link first'); return; }
+        try{
+          await apiGet('addProduct', { name, image: image || 'https://placehold.co/400x400/2e1c34/f7eee2?text=' + encodeURIComponent(name.slice(0,12)), link });
+          showToast('Product added');
+        }catch(e){ showToast('Save failed — try again'); }
+        renderAdmin('products');
+      });
+
+      document.querySelectorAll('.del-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try{
+            await apiGet('deleteProduct', { id: btn.dataset.id });
+            showToast('Removed');
+          }catch(e){ showToast('Remove failed'); }
+          renderAdmin('products');
+        });
+      });
+    }
+  }
+
+  if(isAdmin){
+    renderAdmin('overview');
+  } else {
+    renderShop();
+  }
+})();
+</script>
+</body>
+</html>
